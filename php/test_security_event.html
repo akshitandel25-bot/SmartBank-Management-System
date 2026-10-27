@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartBank Security Test</title>
+</head>
+<body>
+    <h2>TrustGuard Security Event Test</h2>
+
+    <form action="save_security_event.php" method="POST">
+        <label>Account ID:</label>
+        <input type="number" name="account_id" value="1" required>
+        <br><br>
+
+        <label>Transaction ID (optional):</label>
+        <input type="number" name="transaction_id">
+        <br><br>
+
+        <label>Event Type:</label>
+        <input type="text" name="event_type"
+               value="TrustGuard Test" required>
+        <br><br>
+
+        <label>Risk Level:</label>
+        <select name="risk_level">
+            <option>Low</option>
+            <option selected>Medium</option>
+            <option>High</option>
+        </select>
+        <br><br>
+
+        <label>Description:</label>
+        <input type="text" name="description"
+               value="Test security event" required>
+        <br><br>
+
+        <label>Recommended Action:</label>
+        <input type="text" name="recommended_action"
+               value="Verify the transaction details">
+        <br><br>
+
+        <label>Status:</label>
+        <select name="event_status">
+            <option selected>Needs review</option>
+            <option>Reviewed</option>
+            <option>Resolved</option>
+        </select>
+        <br><br>
+
+        <button type="submit">Save Test Event</button>
+    </form>
+</body>
+</html>

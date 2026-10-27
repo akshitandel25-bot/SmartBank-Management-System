@@ -1,0 +1,21 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartBank API Test</title>
+</head>
+<body>
+    <h2>Test SmartBank Transaction</h2>
+
+    <form action="save_transaction.php" method="POST">
+        <input type="hidden" name="account_id" value="1">
+        <input type="hidden" name="recipient" value="Test Deposit">
+        <input type="hidden" name="transaction_type" value="Deposit">
+        <input type="hidden" name="amount" value="100">
+        <input type="hidden" name="status" value="Completed">
+        <input type="hidden" name="fraud_reason" value="">
+
+        <button type="submit">Save Test Transaction ₹100</button>
+    </form>
+</body>
+</html>
