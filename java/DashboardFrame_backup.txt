@@ -1,0 +1,539 @@
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import java.awt.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
+public class DashboardFrame extends JFrame {
+
+    private final Color navy = new Color(17, 31, 58);
+    private final Color blue = new Color(48, 101, 230);
+    private final Color background = new Color(245, 247, 251);
+    private final Color muted = new Color(105, 115, 135);
+
+    private double balance = 125000.00;
+    private double income = 45000.00;
+    private double expenses = 18750.00;
+    private int suspiciousCount = 0;
+    private final Map<String, Integer> recipientTransferCounts = new HashMap<>();
+
+    private JLabel balanceValue;
+    private JLabel incomeValue;
+    private JLabel expensesValue;
+    private JLabel securityValue;
+    private JLabel statusMessage;
+
+    private DefaultTableModel tableModel;
+    private JPanel contentPanel;
+    private CardLayout cardLayout;
+
+    public DashboardFrame() {
+        setTitle("SmartBank | Banking Dashboard");
+        setSize(1200, 760);
+        setMinimumSize(new Dimension(950, 620));
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+
+        add(createSidebar(), BorderLayout.WEST);
+
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
+        contentPanel.setBackground(background);
+
+        contentPanel.add(createOverview(), "Overview");
+        contentPanel.add(createTransactionsPage(), "Transactions");
+        contentPanel.add(createSecurityPage(), "Security");
+
+        add(contentPanel, BorderLayout.CENTER);
+        cardLayout.show(contentPanel, "Overview");
+    }
+
+    private JPanel createSidebar() {
+        JPanel side = new JPanel();
+        side.setBackground(navy);
+        side.setPreferredSize(new Dimension(220, 0));
+        side.setBorder(new EmptyBorder(28, 16, 20, 16));
+        side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
+
+        JLabel logo = new JLabel("S  SMARTBANK");
+        logo.setForeground(Color.WHITE);
+        logo.setFont(new Font("SansSerif", Font.BOLD, 20));
+        logo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        side.add(logo);
+
+        JLabel subtitle = new JLabel("DIGITAL BANKING");
+        subtitle.setForeground(new Color(155, 175, 210));
+        subtitle.setFont(new Font("SansSerif", Font.BOLD, 10));
+        subtitle.setBorder(new EmptyBorder(8, 2, 35, 0));
+        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        side.add(subtitle);
+
+        addNavButton(side, "Overview", "Overview");
+        addNavButton(side, "Transactions", "Transactions");
+        addNavButton(side, "Security Center", "Security");
+
+        side.add(Box.createVerticalGlue());
+
+        JLabel demo = new JLabel(
+                "<html><div style='width:160px'>"
+                + "DEMO ENVIRONMENT<br><br>"
+                + "Sample banking data only. "
+                + "No real money is moved."
+                + "</div></html>");
+        demo.setForeground(new Color(190, 202, 225));
+        demo.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        demo.setBorder(new EmptyBorder(12, 4, 16, 4));
+        side.add(demo);
+
+        JButton logout = new JButton("←  Sign out");
+        logout.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logout.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        logout.addActionListener(e -> {
+            dispose();
+            new Main().setVisible(true);
+        });
+        side.add(logout);
+
+        return side;
+    }
+
+    private void addNavButton(JPanel side, String text, String page) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("SansSerif", Font.BOLD, 13));
+        button.setForeground(Color.WHITE);
+        button.setBackground(navy);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setFocusPainted(false);
+        button.setBorder(new EmptyBorder(13, 12, 13, 8));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.addActionListener(e -> {
+            cardLayout.show(contentPanel, page);
+            if (page.equals("Overview") || page.equals("Security")) {
+                refreshOverview();
+            }
+        });
+        side.add(button);
+        side.add(Box.createVerticalStrut(7));
+    }
+
+    private JPanel createOverview() {
+        JPanel page = pagePanel();
+
+        JLabel heading = heading("Good day, Admin 👋");
+        page.add(heading);
+        page.add(label("Here's your financial snapshot for today.",
+                muted, 14));
+        page.add(Box.createVerticalStrut(25));
+
+        JPanel stats = new JPanel(new GridLayout(1, 3, 14, 0));
+        stats.setOpaque(false);
+
+        balanceValue = new JLabel();
+        incomeValue = new JLabel();
+        expensesValue = new JLabel();
+
+        stats.add(statCard("TOTAL BALANCE", balanceValue, "Available funds"));
+        stats.add(statCard("TOTAL INCOME", incomeValue, "Demo income"));
+        stats.add(statCard("TOTAL EXPENSES", expensesValue, "Demo spending"));
+
+        page.add(stats);
+        page.add(Box.createVerticalStrut(22));
+
+        JPanel actions = whitePanel();
+        actions.setLayout(new BorderLayout(10, 12));
+        actions.add(heading("Quick actions"), BorderLayout.NORTH);
+
+        JPanel actionButtons = new JPanel(new GridLayout(1, 3, 12, 0));
+        actionButtons.setOpaque(false);
+
+        JButton transfer = actionButton("↗  Transfer money");
+        JButton deposit = actionButton("+  Deposit");
+        JButton withdraw = actionButton("−  Withdraw");
+
+        transfer.addActionListener(e -> transferMoney());
+        deposit.addActionListener(e -> depositMoney());
+        withdraw.addActionListener(e -> withdrawMoney());
+
+        actionButtons.add(transfer);
+        actionButtons.add(deposit);
+        actionButtons.add(withdraw);
+
+        actions.add(actionButtons, BorderLayout.CENTER);
+        page.add(actions);
+        page.add(Box.createVerticalStrut(22));
+
+        JPanel recent = whitePanel();
+        recent.setLayout(new BorderLayout(8, 12));
+        recent.add(heading("Recent transactions"), BorderLayout.NORTH);
+
+        JTable table = createTransactionTable();
+        recent.add(new JScrollPane(table), BorderLayout.CENTER);
+
+        page.add(recent);
+        refreshOverview();
+
+        return page;
+    }
+
+    private JPanel createTransactionsPage() {
+        JPanel page = pagePanel();
+        page.add(heading("Transactions"));
+        page.add(label("Search your demo transaction history.",
+                muted, 14));
+        page.add(Box.createVerticalStrut(20));
+
+        JPanel card = whitePanel();
+        card.setLayout(new BorderLayout(10, 12));
+
+        JTextField search = new JTextField();
+        search.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        search.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 225, 235)),
+                new EmptyBorder(10, 12, 10, 12)));
+        search.setToolTipText("Search by recipient, type or status");
+        card.add(search, BorderLayout.NORTH);
+
+        JTable table = createTransactionTable();
+        TableRowSorter<DefaultTableModel> sorter =
+                new TableRowSorter<>(tableModel);
+        table.setRowSorter(sorter);
+        card.add(new JScrollPane(table), BorderLayout.CENTER);
+
+        search.getDocument().addDocumentListener(
+                new javax.swing.event.DocumentListener() {
+            private void filter() {
+                String query = search.getText().trim();
+                if (query.isEmpty()) {
+                    sorter.setRowFilter(null);
+                } else {
+                    sorter.setRowFilter(
+                            RowFilter.regexFilter(
+                                    "(?i)" + java.util.regex.Pattern.quote(query)));
+                }
+            }
+
+            public void insertUpdate(
+                    javax.swing.event.DocumentEvent e) { filter(); }
+            public void removeUpdate(
+                    javax.swing.event.DocumentEvent e) { filter(); }
+            public void changedUpdate(
+                    javax.swing.event.DocumentEvent e) { filter(); }
+        });
+
+        page.add(card);
+        return page;
+    }
+
+    private JPanel createSecurityPage() {
+        JPanel page = pagePanel();
+        page.add(heading("Security Center"));
+        page.add(label("Demo transaction monitoring and risk indicators.",
+                muted, 14));
+        page.add(Box.createVerticalStrut(24));
+
+        JPanel summary = whitePanel();
+        summary.setLayout(new BoxLayout(summary, BoxLayout.Y_AXIS));
+
+        securityValue = heading("");
+        summary.add(securityValue);
+        summary.add(Box.createVerticalStrut(8));
+        summary.add(label("Flagged transactions in this session",
+                muted, 13));
+        summary.add(Box.createVerticalStrut(12));
+
+        JLabel rule = label(
+                "<html>Demo detection rules:<br><br>"
+                + "• Flag transfers of ₹10,000 or more.<br>"
+                + "• Flag repeated transfers to the same recipient "
+                + "within this session.<br>"
+                + "• Review flagged transactions before taking action."
+                + "</html>", navy, 14);
+        summary.add(rule);
+
+        page.add(summary);
+        page.add(Box.createVerticalStrut(20));
+
+        JPanel alerts = whitePanel();
+        alerts.setLayout(new BorderLayout(8, 8));
+        alerts.add(heading("Latest security event"), BorderLayout.NORTH);
+
+        statusMessage = label(
+                "No suspicious transactions detected yet.",
+                muted, 13);
+        alerts.add(statusMessage, BorderLayout.CENTER);
+
+        page.add(alerts);
+        return page;
+    }
+
+    private JPanel pagePanel() {
+        JPanel page = new JPanel();
+        page.setBackground(background);
+        page.setBorder(new EmptyBorder(28, 28, 28, 28));
+        page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
+        return page;
+    }
+
+    private JPanel whitePanel() {
+        JPanel panel = new JPanel();
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(230, 234, 242)),
+                new EmptyBorder(18, 18, 18, 18)));
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        return panel;
+    }
+
+    private JPanel statCard(String title, JLabel value, String note) {
+        JPanel card = whitePanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+
+        card.add(label(title, muted, 11));
+        card.add(Box.createVerticalStrut(14));
+
+        value.setFont(new Font("SansSerif", Font.BOLD, 23));
+        value.setForeground(navy);
+        card.add(value);
+
+        card.add(Box.createVerticalStrut(8));
+        card.add(label(note, muted, 11));
+        return card;
+    }
+
+    private JLabel heading(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("SansSerif", Font.BOLD, 23));
+        label.setForeground(navy);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
+    }
+
+    private JLabel label(String text, Color color, int size) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("SansSerif", Font.PLAIN, size));
+        label.setForeground(color);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
+    }
+
+    private JButton actionButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("SansSerif", Font.BOLD, 13));
+        button.setForeground(blue);
+        button.setBackground(new Color(239, 244, 255));
+        button.setFocusPainted(false);
+        button.setBorder(new EmptyBorder(14, 8, 14, 8));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private JTable createTransactionTable() {
+        if (tableModel == null) {
+            tableModel = new DefaultTableModel(
+                    new String[]{"Date", "Description", "Type",
+                        "Amount", "Status"}, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+
+            addTransaction("Salary credit", "Income", 45000, "Completed");
+            addTransaction("Grocery store", "Expense", -2350, "Completed");
+            addTransaction("Electricity bill", "Expense", -1800, "Completed");
+            addTransaction("Online shopping", "Expense", -4200, "Completed");
+            addTransaction("Mobile recharge", "Expense", -499, "Completed");
+        }
+
+        JTable table = new JTable(tableModel);
+        table.setRowHeight(32);
+        table.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        table.getTableHeader().setFont(
+                new Font("SansSerif", Font.BOLD, 12));
+        table.setFillsViewportHeight(true);
+        return table;
+    }
+
+    private void addTransaction(
+            String description, String type, double amount, String status) {
+        String date = LocalDateTime.now().format(
+                DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm"));
+
+        tableModel.insertRow(0, new Object[]{
+            date, description, type,
+            (amount < 0 ? "- " : "+ ") + money(Math.abs(amount)),
+            status
+        });
+    }
+
+    private String money(double amount) {
+        return String.format(java.util.Locale.US, "₹%,.2f", amount);
+    }
+
+    private void refreshOverview() {
+        if (balanceValue != null) {
+        balanceValue.setText(money(balance));
+    }
+    
+    if (incomeValue != null) {
+        incomeValue.setText(money(income));
+    }
+
+    if (expensesValue != null) {
+        expensesValue.setText(money(expenses));
+    }
+
+    if (securityValue != null) {
+        securityValue.setText(
+            suspiciousCount == 0
+                ? "Monitoring active"
+                : suspiciousCount + " flagged transaction(s)"
+        );
+    }
+}
+
+    private boolean validAmount(String text) {
+        try {
+            double amount = Double.parseDouble(text.trim());
+            return Double.isFinite(amount) && amount > 0;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+
+    private void transferMoney() {
+        JTextField recipient = new JTextField();
+        JTextField amountField = new JTextField();
+
+        JPanel form = new JPanel(new GridLayout(0, 1, 4, 6));
+        form.add(new JLabel("Recipient name"));
+        form.add(recipient);
+        form.add(new JLabel("Transfer amount (₹)"));
+        form.add(amountField);
+
+        int choice = JOptionPane.showConfirmDialog(
+                this, form, "Demo money transfer",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (choice != JOptionPane.OK_OPTION) return;
+
+        String name = recipient.getText().trim();
+        String amountText = amountField.getText().trim();
+
+        if (name.isEmpty() || !validAmount(amountText)) {
+            showMessage("Enter a recipient and a valid positive amount.");
+            return;
+        }
+
+        double amount = Double.parseDouble(amountText);
+
+        if (amount > balance) {
+            showMessage("Insufficient demo balance.");
+            return;
+        }
+
+        String recipientKey = name.toLowerCase(
+        java.util.Locale.ROOT);
+        
+        int previousTransfers = recipientTransferCounts.getOrDefault(
+        recipientKey, 0);
+        
+        boolean repeatedTransfer = previousTransfers >= 1;
+        boolean largeTransfer = amount >= 10000;
+        
+        boolean flagged = largeTransfer || repeatedTransfer;
+        
+        recipientTransferCounts.put(recipientKey, previousTransfers + 1);
+        balance -= amount;
+        expenses += amount;
+
+        String status = flagged ? "Flagged for review" : "Completed";
+        addTransaction("Transfer to " + name, "Transfer", -amount, status);
+
+        if (flagged) {
+            suspiciousCount++;
+            
+            String reason;
+            if (largeTransfer && repeatedTransfer) {
+                reason = "Large and repeated transfer";
+            } 
+            else if (largeTransfer) {
+                reason = "Large transfer";
+            } 
+            else {
+                reason = "Repeated transfer to the same recipient";
+            }
+            if (statusMessage != null) {
+                statusMessage.setText("⚠ " + reason + " to " + name + ": " + money(amount) + " — review recommended.");
+                statusMessage.setForeground(new Color(190, 95, 20));
+            }
+        } 
+        else if (statusMessage != null) {
+            statusMessage.setText("No rule triggered by this transfer.");
+            statusMessage.setForeground(muted);
+        }
+
+        refreshOverview();
+        showMessage(flagged
+                ? "Demo transfer recorded and flagged for review."
+                : "Demo transfer recorded successfully.");
+    }
+
+    private void depositMoney() {
+        String input = JOptionPane.showInputDialog(
+                this, "Enter deposit amount (₹):", "Demo deposit",
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (input == null) return;
+        if (!validAmount(input)) {
+            showMessage("Enter a valid positive amount.");
+            return;
+        }
+
+        double amount = Double.parseDouble(input.trim());
+        balance += amount;
+        income += amount;
+        addTransaction("Cash deposit", "Deposit", amount, "Completed");
+        refreshOverview();
+        showMessage("Demo deposit recorded successfully.");
+    }
+
+    private void withdrawMoney() {
+        String input = JOptionPane.showInputDialog(
+                this, "Enter withdrawal amount (₹):", "Demo withdrawal",
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (input == null) return;
+        if (!validAmount(input)) {
+            showMessage("Enter a valid positive amount.");
+            return;
+        }
+
+        double amount = Double.parseDouble(input.trim());
+        if (amount > balance) {
+            showMessage("Insufficient demo balance.");
+            return;
+        }
+
+        balance -= amount;
+        expenses += amount;
+        addTransaction("Cash withdrawal", "Withdrawal", -amount, "Completed");
+        refreshOverview();
+        showMessage("Demo withdrawal recorded successfully.");
+    }
+
+    private void showMessage(String message) {
+        JOptionPane.showMessageDialog(
+                this, message, "SmartBank",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+}

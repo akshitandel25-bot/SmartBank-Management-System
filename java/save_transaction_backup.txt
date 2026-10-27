@@ -1,0 +1,67 @@
+
+<?php
+header("Content-Type: application/json");
+
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
+    echo json_encode([
+        "success" => false,
+        "message" => "Use POST to save a transaction"
+    ]);
+    exit;
+}
+
+require "db.php";
+
+$account_id = filter_input(INPUT_POST, "account_id", FILTER_VALIDATE_INT);
+$recipient = trim($_POST["recipient"] ?? "");
+$type = trim($_POST["transaction_type"] ?? "");
+$amount = filter_input(INPUT_POST, "amount", FILTER_VALIDATE_FLOAT);
+$status = trim($_POST["status"] ?? "Completed");
+$fraud_reason = trim($_POST["fraud_reason"] ?? "");
+
+$allowed_types = ["Deposit", "Withdrawal", "Transfer"];
+
+if (!$account_id || $amount === false || $amount === null ||
+    $amount <= 0 || !in_array($type, $allowed_types, true)) {
+    http_response_code(400);
+    echo json_encode([
+        "success" => false,
+        "message" => "Invalid transaction details"
+    ]);
+    exit;
+}
+
+$stmt = $conn->prepare(
+    "INSERT INTO transactions
+    (account_id, recipient, transaction_type, amount, status, fraud_reason)
+    VALUES (?, ?, ?, ?, ?, ?)"
+);
+
+$stmt->bind_param(
+    "issdss",
+    $account_id,
+    $recipient,
+    $type,
+    $amount,
+    $status,
+    $fraud_reason
+);
+
+if ($stmt->execute()) {
+    echo json_encode([
+        "success" => true,
+        "message" => "Transaction saved successfully",
+        "transaction_id" => $conn->insert_id
+    ]);
+} else {
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "message" => "Could not save transaction"
+    ]);
+}
+
+$stmt->close();
+$conn->close();
+?>
